@@ -1,0 +1,6 @@
+name = "chnroute-cfworker"
+type = "rust"
+zone_id = ""
+private = false
+account_id = ""
+route = ""
