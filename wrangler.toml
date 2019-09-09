@@ -1,4 +1,4 @@
-name = "chnroute-cfworker"
+name = "chnroute-worker"
 type = "rust"
 zone_id = ""
 private = false
