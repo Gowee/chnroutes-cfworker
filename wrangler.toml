@@ -1,6 +1,0 @@
-name = "chnroute-worker"
-type = "rust"
-zone_id = ""
-private = false
-account_id = ""
-route = ""
