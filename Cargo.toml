@@ -1,5 +1,5 @@
 [package]
-name = "chnroute-cfworker"
+name = "chnroutes-cfworker"
 version = "0.1.0"
 authors = ["Hung-I Wang <whygowe@gmail.com>"]
 edition = "2018"
