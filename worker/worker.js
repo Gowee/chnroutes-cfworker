@@ -46,7 +46,6 @@ async function handleGenerate(request) {
   }
   catch (e) {
     throw e;
-    return new Response(`Error: ${e}`, { status: 400 });
   }
 }
 
