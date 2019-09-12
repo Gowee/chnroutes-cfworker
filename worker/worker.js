@@ -2,29 +2,68 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
+const { routes_from_rir_stats } = wasm_bindgen;
+
 /**
  * Fetch and log a request
  * @param {Request} request
  */
 async function handleRequest(request) {
-  const { routes_from_rir_stats  } = wasm_bindgen;
   await wasm_bindgen(wasm)
-  try {
-    const rir_stats = await fetchRIRStats("apnic");
-    const result = routes_from_rir_stats(rir_stats, "CN");
-    return new Response(result, { status: 200 })
-  }
-  catch (error) {
-    console.log(error);
-    return new Response(error, { status: 500 });
+  const url = new URL(request.url);
+  switch (url.pathname) {
+    case '/':
+      return Response.redirect("https://github.com/Gowee/chnroutes-cfworker#api", 302);
+      break;
+    case '/generate':
+      return await handleGenerate(request);
+      break;
+    default:
+      return new Response(`Resource Not Found at Endpoint ${url.pathname}`, { status: 404 });
   }
 }
 
-async function fetchRIRStats(registry) {
-  // https://www.nro.net/about/rirs/statistics/
-  const response = await fetch(`https://ftp.apnic.net/apnic/stats/${registry}/delegated-${registry}-latest`);
-  if (!response.ok) {
-    return new Error(`Failed to request upstream with HTTP ${response.status} (${response.statusText}).`);
+async function handleGenerate(request) {
+  try {
+    const params = (new URL(request.url)).searchParams;
+    const countries = (params.get("countries") || "!").toUpperCase();
+    const registries = ((!params.get("registries") || params.get("registries").toUpperCase() == "ALL") ? "AFRINIC,APNIC,ARIN,LACNIC,RIPE" : params.get("registries").toUpperCase()).split(",");
+    const rir_stats = [];
+    for (const registry of registries) {
+      const rir_stats_url = get_rir_stats_url(registry);
+      if (!rir_stats_url) {
+        throw new Error(`Unknown registry ${registry}`);
+      }
+      const response = await fetch(rir_stats_url);
+      if (!response.ok) {
+        throw new Error(`Failed to request upstream with HTTP ${response.status} (${response.statusText}).`);
+      }
+      const data = await response.text();
+      rir_stats.push(data);
+    }
+    return new Response(routes_from_rir_stats(rir_stats.join("\n"), countries), { contentType: "text/plain" });
+    //return new Response("Boom");
   }
-  return await response.text();
+  catch (e) {
+    throw e;
+    return new Response(`Error: ${e}`, { status: 400 });
+  }
+}
+
+function get_rir_stats_url(registry) {
+  // https://www.nro.net/about/rirs/statistics/
+  switch (registry) {
+    case "AFRINIC":
+      return "http://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-latest";
+    case "APNIC":
+      return "http://ftp.apnic.net/stats/apnic/delegated-apnic-latest";
+    case "ARIN":
+      return "http://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest";
+    case "LACNIC":
+      return "http://ftp.lacnic.net/pub/stats/lacnic/delegated-lacnic-latest";
+    case "RIPE":
+      return "https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-latest";
+    default:
+      return null;
+  }
 }

@@ -1,18 +1,17 @@
-#![feature(type_alias_enum_variants)]
-
 extern crate cfg_if;
 extern crate wasm_bindgen;
 
 #[macro_use]
 mod utils;
 
-use std::net::Ipv4Addr;
-use std::cmp::min;
-use std::fmt::Write;
 use cfg_if::cfg_if;
+use std::cmp::min;
+use std::collections::HashSet;
+use std::fmt::Write;
+use std::net::Ipv4Addr;
 use wasm_bindgen::prelude::*;
 
-use utils::{math_log2, set_panic_hook, log};
+use utils::{log, math_log2, set_panic_hook};
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -26,13 +25,15 @@ cfg_if! {
 
 #[derive(Debug)]
 enum Error {
-    RIRStatsMalformed(usize)
+    RIRStatsMalformed(usize),
 }
 
 impl From<Error> for JsValue {
     fn from(err: Error) -> JsValue {
         match err {
-            Error::RIRStatsMalformed(lineno) => JsValue::from(format!("RIR stats is malformed at line {}.", lineno)),
+            Error::RIRStatsMalformed(lineno) => {
+                JsValue::from(format!("RIR stats is malformed at line {}.", lineno))
+            }
         }
     }
 }
@@ -42,19 +43,34 @@ pub fn greet() -> String {
     "Hello, wasm-worker!".to_string()
 }
 
-
-
 #[wasm_bindgen]
-pub fn routes_from_rir_stats(raw_data: &str, country: &str) -> Result<String, JsValue> {
+pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, JsValue> {
     set_panic_hook();
+    let excluding;
+    let country_set: HashSet<&str> = if countries.starts_with("!") {
+        excluding = true;
+        &countries[1..]
+    } else {
+        excluding = false;
+        countries
+    }
+    .split(",")
+    .collect();
     // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
     let mut raw_entries: Vec<(u32, u32)> = Vec::new();
     for (index, entry) in raw_data.split("\n").enumerate() {
         if !entry.starts_with("#") && !entry.is_empty() {
             let fields: Vec<&str> = entry.split("|").collect();
-            if fields.len() >= 7 && fields[1] == country && fields[2] == "ipv4" {
-                let ip: Ipv4Addr = fields[3].parse().map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
-                let count: u32 = fields[4].parse().map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
+            if fields.len() >= 7
+                && (excluding ^ country_set.contains(fields[1]))
+                && fields[2] == "ipv4"
+            {
+                let ip: Ipv4Addr = fields[3]
+                    .parse()
+                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
+                let count: u32 = fields[4]
+                    .parse()
+                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
                 let [a, b, c, d] = ip.octets();
                 let ip = (a as u32) << 24 | (b as u32) << 16 | (c as u32) << 8 | d as u32;
                 raw_entries.push((ip, count));
@@ -68,13 +84,14 @@ pub fn routes_from_rir_stats(raw_data: &str, country: &str) -> Result<String, Js
     for entry in raw_entries.into_iter().skip(1) {
         if entry.0 - last_entry.0 == last_entry.1 {
             last_entry = (last_entry.0, last_entry.1 + entry.1)
-        }
-        else {
+        } else {
             merged_entries.push(last_entry);
             last_entry = entry;
         }
     }
-    if last_entry != *merged_entries.last().unwrap() /* FIX */ {
+    if last_entry != *merged_entries.last().ok_or("Upstream returns empty.")?
+    /* FIX */
+    {
         merged_entries.push(last_entry);
     }
     let mut output = String::new();
