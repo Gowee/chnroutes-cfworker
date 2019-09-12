@@ -3,3 +3,5 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
 
 ## Credits
 This repo takes [rustwasm-worker-template](https://github.com/cloudflare/rustwasm-worker-template), which is a project by [Ashley Williams](https://github.com/ashleygwilliams), as the base skeleton.
+
+The name *chnroutes* comes from [https://github.com/fivesheep/chnroutes.git](https://github.com/fivesheep/chnroutes.git).

@@ -13,6 +13,11 @@ default = ["console_error_panic_hook"]
 [dependencies]
 cfg-if = "0.1.2"
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.3"
+js-sys = "0.3"
+web-sys = {version = "0.3", features = ["Cache", "Request", "Response", "ResponseInit"]}
+url = "2.1"
+isocountry = "0.2"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
