@@ -1,5 +1,5 @@
 # chnroutes-cfworker
-Generate <abbr title="routes of mainland China">CHNRoutes</abbr> by fetching [RIR stats](https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/) from APNIC and managing to compressing routes by merging consecutive CIDRs, deployed on [Cloudflare Workers](https://workers.cloudflare.com/). 
+Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RIR stats](https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/) from APNIC and managing to compressing routes by merging consecutive CIDRs, deployed on [Cloudflare Workers](https://workers.cloudflare.com/). 
 
 ## API
 **Base URL: `https://chnroute-worker.bamboo.workers.dev` [🔗](https://chnroute-worker.bamboo.workers.dev)**
