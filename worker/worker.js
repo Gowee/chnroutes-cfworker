@@ -2,6 +2,8 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
+class ClientError extends Error {}
+
 const { routes_from_rir_stats } = wasm_bindgen;
 
 /**
@@ -28,11 +30,14 @@ async function handleGenerate(request) {
     const params = (new URL(request.url)).searchParams;
     const countries = (params.get("countries") || "!").toUpperCase();
     const registries = ((!params.get("registries") || params.get("registries").toUpperCase() == "ALL") ? "AFRINIC,APNIC,ARIN,LACNIC,RIPE" : params.get("registries").toUpperCase()).split(",");
+    if (countries.match(/^\!?([A-Z]{2})?(,[A-Z]{2})*$/) === null) {
+      throw new ClientError("Unable to parse `countries`");
+    }
     const rir_stats = [];
     for (const registry of registries) {
       const rir_stats_url = get_rir_stats_url(registry);
       if (!rir_stats_url) {
-        throw new Error(`Unknown registry ${registry}`);
+        throw new ClientError(`Unknown registry ${registry}`);
       }
       const response = await fetch(rir_stats_url);
       if (!response.ok) {
@@ -45,7 +50,12 @@ async function handleGenerate(request) {
     //return new Response("Boom");
   }
   catch (e) {
-    throw e;
+    if (e instanceof ClientError) {
+      return new Response(`Client Error: ${e}`, { status: 400 });
+    }
+    else {
+      return new Response(`Server Error: ${e}`, { status: 500 });
+    }
   }
 }
 
