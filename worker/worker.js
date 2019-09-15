@@ -35,15 +35,7 @@ async function handleGenerate(request) {
     }
     const rir_stats = [];
     for (const registry of registries) {
-      const rir_stats_url = get_rir_stats_url(registry);
-      if (!rir_stats_url) {
-        throw new ClientError(`Unknown registry ${registry}`);
-      }
-      const response = await fetch(rir_stats_url);
-      if (!response.ok) {
-        throw new Error(`Failed to request upstream with HTTP ${response.status} (${response.statusText}).`);
-      }
-      const data = await response.text();
+      const data = await fetch_rir_stats(registry);
       rir_stats.push(data);
     }
     return new Response(routes_from_rir_stats(rir_stats.join("\n"), countries), { contentType: "text/plain" });
@@ -57,6 +49,26 @@ async function handleGenerate(request) {
       return new Response(`Server Error: ${e}`, { status: 500 });
     }
   }
+}
+
+async function fetch_rir_stats(registry) {
+  const rir_stats_url = get_rir_stats_url(registry);
+  if (!rir_stats_url) {
+    throw new ClientError(`Unknown registry ${registry}`);
+  }
+  const cache = caches.default;
+  let response = await cache.match(rir_stats_url);
+  if (!response) {
+    response = await fetch(rir_stats_url);
+    if (!response.ok) {
+      throw new Error(`Failed to request upstream with HTTP ${response.status} (${response.statusText}).`);
+    }
+    await cache.put(rir_stats_url, response.clone()); // FIX: waitUntil?; TODO: will CF handle expiration properly?
+  }
+  else {
+    throw new Error("Cache hit!");
+  }
+  return await response.text();
 }
 
 function get_rir_stats_url(registry) {
