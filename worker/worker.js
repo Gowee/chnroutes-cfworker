@@ -65,9 +65,6 @@ async function fetch_rir_stats(registry) {
     }
     await cache.put(rir_stats_url, response.clone()); // FIX: waitUntil?; TODO: will CF handle expiration properly?
   }
-  else {
-    throw new Error("Cache hit!");
-  }
   return await response.text();
 }
 
