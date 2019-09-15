@@ -2,7 +2,7 @@
 Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RIR stats](https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/) and managing to compressing routes by merging consecutive CIDRs, deployed on [Cloudflare Workers](https://workers.cloudflare.com/). 
 
 ## API
-**Base URL: `https://chnroute-worker.bamboo.workers.dev` [🔗](https://chnroute-worker.bamboo.workers.dev)**
+**Base URL: `https://chnroutes-worker.bamboo.workers.dev` [🔗](https://chnroutes-worker.bamboo.workers.dev)**
 
 ### Generate Routes
 - **Endpoint: `/generate`**
@@ -15,7 +15,7 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
         - Excluding is not supported.
         - RIR stats of all registry are fetched respectively when generating routes (regardless of caching). So be careful that it may take much longer to cover more registries.
 - **Examples:**
-    - `https://chnroute-worker.bamboo.workers.dev/generate?countries=CN&registries=APNIC` [🔗](https://chnroute-worker.bamboo.workers.dev/generate?countries=CN&registries=APNIC)
+    - `https://chnroutes-worker.bamboo.workers.dev/generate?countries=CN&registries=APNIC` [🔗](https://chnroutes-worker.bamboo.workers.dev/generate?countries=CN&registries=APNIC)
         - Typical chnroutes, useful for spliting traffic when bypassing the [GFW](https://en.wikipedia.org/wiki/Great_Firewall) with VPN/Proxies 
         - Becasuse almost all of mainland China IPs are delegated to APNIC currently (Sep 2019), so it might be sufficient to only cover APNIC.
     - ...
