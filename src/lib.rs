@@ -97,10 +97,10 @@ pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, 
     let mut output = String::new();
     let mut line = 0;
     for (mut ip, mut count) in merged_entries.into_iter() {
+        console_log!("{} {}", Ipv4Addr::from(ip), count);
         while count != 0 {
-            let bits = math_log2(count);
-            let b = min(min(count, 2u32.pow(bits)), 2u32.pow(ip.trailing_zeros()));
-            write!(output, "{}/{}\n", Ipv4Addr::from(ip), 32 - bits).unwrap();
+            let b = min(min(count, 2u32.pow(math_log2(count))), 2u32.pow(ip.trailing_zeros()));
+            write!(output, "{}/{}\n", Ipv4Addr::from(ip), 32 - math_log2(b)).unwrap();
             line += 1;
             assert!(count > 0);
             count -= b;
