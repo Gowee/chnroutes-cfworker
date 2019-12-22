@@ -8,7 +8,7 @@ use cfg_if::cfg_if;
 use std::cmp::min;
 use std::collections::HashSet;
 use std::fmt::Write;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 use wasm_bindgen::prelude::*;
 
 use utils::{log, math_log2, set_panic_hook};
@@ -43,9 +43,7 @@ pub fn greet() -> String {
     "Hello, wasm-worker!".to_string()
 }
 
-#[wasm_bindgen]
-pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, JsValue> {
-    set_panic_hook();
+fn parse_contries(countries: &str) -> (bool, HashSet<&str>) {
     let excluding;
     let country_set: HashSet<&str> = if countries.starts_with("!") {
         excluding = true;
@@ -56,6 +54,73 @@ pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, 
     }
     .split(",")
     .collect();
+
+    return (excluding, country_set);
+}
+
+#[wasm_bindgen]
+pub fn routes_from_rir_stats6(raw_data: &str, countries: &str) -> Result<String, JsValue> {
+    set_panic_hook();
+    let (excluding, country_set) = parse_contries(countries);
+    // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
+    let mut raw_entries: Vec<(u128, u32)> = Vec::new();
+    for (index, entry) in raw_data.split("\n").enumerate() {
+        if !entry.starts_with("#") && !entry.is_empty() {
+            let fields: Vec<&str> = entry.split("|").collect();
+            if fields.len() >= 7
+                && (excluding ^ country_set.contains(fields[1]))
+                && fields[2] == "ipv6"
+            {
+                let ip: Ipv6Addr = fields[3]
+                    .parse()
+                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
+                let prefix: u32 = fields[4]
+                    .parse()
+                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
+                let ip = ip.into();
+                let count = 1 << (128 - prefix);
+                raw_entries.push((ip, count));
+            }
+        }
+    }
+    let raw_len = raw_entries.len();
+    raw_entries.sort();
+    let mut merged_entries = Vec::new();
+    let mut last_entry = raw_entries[0];
+    for entry in raw_entries.into_iter().skip(1) {
+        if entry.0 - last_entry.0 == last_entry.1.into() {
+            last_entry = (last_entry.0, last_entry.1 + entry.1)
+        } else {
+            merged_entries.push(last_entry);
+            last_entry = entry;
+        }
+    }
+    if last_entry != *merged_entries.last().ok_or("Upstream returns empty.")?
+    /* FIX */
+    {
+        merged_entries.push(last_entry);
+    }
+    let mut output = String::new();
+    let mut line = 0;
+    for (mut ip, mut count) in merged_entries.into_iter() {
+        console_log!("{} {}", Ipv6Addr::from(ip), count);
+        while count != 0 {
+            let b = min(min(count, 2u32.pow(math_log2(count))), 2u32.pow(ip.trailing_zeros()));
+            write!(output, "{}/{}\n", Ipv6Addr::from(ip), 128 - math_log2(b)).unwrap();
+            line += 1;
+            assert!(count > 0);
+            count -= b;
+            ip += b as u128;
+        }
+    }
+    console_log!("Total: {}/{}", line, raw_len);
+    return Ok(output);
+}
+
+#[wasm_bindgen]
+pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, JsValue> {
+    set_panic_hook();
+    let (excluding, country_set) = parse_contries(countries);
     // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
     let mut raw_entries: Vec<(u32, u32)> = Vec::new();
     for (index, entry) in raw_data.split("\n").enumerate() {
@@ -71,8 +136,7 @@ pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, 
                 let count: u32 = fields[4]
                     .parse()
                     .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
-                let [a, b, c, d] = ip.octets();
-                let ip = (a as u32) << 24 | (b as u32) << 16 | (c as u32) << 8 | d as u32;
+                let ip = ip.into();
                 raw_entries.push((ip, count));
             }
         }
