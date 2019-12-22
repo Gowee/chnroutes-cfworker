@@ -18,17 +18,17 @@ async function handleRequest(request) {
       return Response.redirect("https://github.com/Gowee/chnroutes-cfworker#api", 302);
       break;
     case '/generate':
-      return await handleGenerate(request);
+      return await handleGenerate(request, false);
       break;
     case '/generate6':
-      return await handleGenerate6(request);
+      return await handleGenerate6(request, true);
       break;
     default:
       return new Response(`Resource Not Found at Endpoint ${url.pathname}`, { status: 404 });
   }
 }
 
-async function handleGenerate(request) {
+async function handleGenerate(request, ipv6) {
   try {
     const params = (new URL(request.url)).searchParams;
     const countries = (params.get("countries") || "!").toUpperCase();
@@ -41,7 +41,8 @@ async function handleGenerate(request) {
       const data = await fetch_rir_stats(registry);
       rir_stats.push(data);
     }
-    return new Response(routes_from_rir_stats(rir_stats.join("\n"), countries), { contentType: "text/plain" });
+    const fn = ipv6 ? routes_from_rir_stats6 : routes_from_rir_stats;
+    return new Response(fn(rir_stats.join("\n"), countries), { contentType: "text/plain" });
     //return new Response("Boom");
   }
   catch (e) {
@@ -52,10 +53,6 @@ async function handleGenerate(request) {
       return new Response(`Server Error: ${e}`, { status: 500 });
     }
   }
-}
-
-async function handleGenerate6(request) {
-    return new Response(routes_from_rir_stats6("foo", "bar"), { contentType: "text/plain" });
 }
 
 async function fetch_rir_stats(registry) {
