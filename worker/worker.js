@@ -21,7 +21,7 @@ async function handleRequest(request) {
       return await handleGenerate(request, false);
       break;
     case '/generate6':
-      return await handleGenerate6(request, true);
+      return await handleGenerate(request, true);
       break;
     default:
       return new Response(`Resource Not Found at Endpoint ${url.pathname}`, { status: 404 });

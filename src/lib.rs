@@ -11,7 +11,7 @@ use std::fmt::Write;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use wasm_bindgen::prelude::*;
 
-use utils::{log, math_log2, set_panic_hook};
+use utils::{log, MathLog2, set_panic_hook};
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -63,7 +63,7 @@ pub fn routes_from_rir_stats6(raw_data: &str, countries: &str) -> Result<String,
     set_panic_hook();
     let (excluding, country_set) = parse_contries(countries);
     // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
-    let mut raw_entries: Vec<(u128, u32)> = Vec::new();
+    let mut raw_entries: Vec<(u128, u128)> = Vec::new();
     for (index, entry) in raw_data.split("\n").enumerate() {
         if !entry.starts_with("#") && !entry.is_empty() {
             let fields: Vec<&str> = entry.split("|").collect();
@@ -78,7 +78,8 @@ pub fn routes_from_rir_stats6(raw_data: &str, countries: &str) -> Result<String,
                     .parse()
                     .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
                 let ip = ip.into();
-                let count = 1 << (128 - prefix);
+                // TODO: is an intermediate `count` value really needed?
+                let count = 1 << (128 - prefix as u128);
                 raw_entries.push((ip, count));
             }
         }
@@ -105,8 +106,8 @@ pub fn routes_from_rir_stats6(raw_data: &str, countries: &str) -> Result<String,
     for (mut ip, mut count) in merged_entries.into_iter() {
         console_log!("{} {}", Ipv6Addr::from(ip), count);
         while count != 0 {
-            let b = min(min(count, 2u32.pow(math_log2(count))), 2u32.pow(ip.trailing_zeros()));
-            write!(output, "{}/{}\n", Ipv6Addr::from(ip), 128 - math_log2(b)).unwrap();
+            let b = min(min(count, 2u128.pow(count.log2() as u32)), 2u128.pow(ip.trailing_zeros()));
+            write!(output, "{}/{}\n", Ipv6Addr::from(ip), 128 - b.log2()).unwrap();
             line += 1;
             assert!(count > 0);
             count -= b;
@@ -163,8 +164,8 @@ pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, 
     for (mut ip, mut count) in merged_entries.into_iter() {
         console_log!("{} {}", Ipv4Addr::from(ip), count);
         while count != 0 {
-            let b = min(min(count, 2u32.pow(math_log2(count))), 2u32.pow(ip.trailing_zeros()));
-            write!(output, "{}/{}\n", Ipv4Addr::from(ip), 32 - math_log2(b)).unwrap();
+            let b = min(min(count, 2u32.pow(count.log2())), 2u32.pow(ip.trailing_zeros()));
+            write!(output, "{}/{}\n", Ipv4Addr::from(ip), 32 - b.log2()).unwrap();
             line += 1;
             assert!(count > 0);
             count -= b;

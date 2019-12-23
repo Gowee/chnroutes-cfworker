@@ -17,10 +17,24 @@ cfg_if! {
     }
 }
 
-// https://users.rust-lang.org/t/logarithm-of-integers/8506/5
-pub fn math_log2(value: u32) -> u32 {
-    std::mem::size_of::<u32>() as u32 * 8 - value.leading_zeros() - 1
+pub trait MathLog2 {
+    // TODO: Self => u8 ?
+    fn log2(self) -> Self;
 }
+
+// https://users.rust-lang.org/t/logarithm-of-integers/8506/5
+macro_rules! implement_log2 {
+    ($int: ident) => {
+        impl MathLog2 for $int {
+            fn log2(self) -> Self {
+                std::mem::size_of::<Self>() as Self * 8 - self.leading_zeros() as Self - 1
+            }
+        }
+    }
+}
+
+implement_log2!(u32);
+implement_log2!(u128);
 
 #[wasm_bindgen]
 extern "C" {
