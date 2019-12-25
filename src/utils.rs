@@ -31,7 +31,7 @@ macro_rules! implement_log2 {
                 std::mem::size_of::<Self>() as u32 * 8 - self.leading_zeros() - 1
             }
         }
-    }
+    };
 }
 
 implement_log2!(u32);

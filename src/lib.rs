@@ -11,7 +11,7 @@ use std::fmt::Write;
 use std::net::{Ipv4Addr, Ipv6Addr};
 use wasm_bindgen::prelude::*;
 
-use utils::{log, MathLog2, set_panic_hook};
+use utils::{log, set_panic_hook, MathLog2};
 
 cfg_if! {
     // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -58,120 +58,105 @@ fn parse_contries(countries: &str) -> (bool, HashSet<&str>) {
     return (excluding, country_set);
 }
 
-#[wasm_bindgen]
-pub fn routes_from_rir_stats6(raw_data: &str, countries: &str) -> Result<String, JsValue> {
-    set_panic_hook();
-    let (excluding, country_set) = parse_contries(countries);
-    // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
-    let mut raw_entries: Vec<(u128, u128)> = Vec::new();
-    for (index, entry) in raw_data.split("\n").enumerate() {
-        if !entry.starts_with("#") && !entry.is_empty() {
-            let fields: Vec<&str> = entry.split("|").collect();
-            if fields.len() >= 7
-                && (excluding ^ country_set.contains(fields[1]))
-                && fields[2] == "ipv6"
-            {
-                let ip: Ipv6Addr = fields[3]
-                    .parse()
-                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
-                let prefix: u32 = fields[4]
-                    .parse()
-                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
-                let ip = ip.into();
-                // TODO: is an intermediate `count` value really needed?
-                let count = 1 << (128 - prefix as u128);
-                raw_entries.push((ip, count));
-            }
-        }
-    }
-    let raw_len = raw_entries.len();
-    raw_entries.sort();
-    let mut merged_entries = Vec::new();
-    let mut last_entry = raw_entries[0];
-    for entry in raw_entries.into_iter().skip(1) {
-        if entry.0 - last_entry.0 == last_entry.1.into() {
-            last_entry = (last_entry.0, last_entry.1 + entry.1)
-        } else {
-            merged_entries.push(last_entry);
-            last_entry = entry;
-        }
-    }
-    if last_entry != *merged_entries.last().ok_or("Upstream returns empty.")?
-    /* FIX */
-    {
-        merged_entries.push(last_entry);
-    }
-    let mut output = String::new();
-    let mut line = 0;
-    for (mut ip, mut count) in merged_entries.into_iter() {
-        console_log!("{} {}", Ipv6Addr::from(ip), count);
-        while count != 0 {
-            let b = min(min(count, 2u128.pow(count.log2() as u32)), 2u128.pow(ip.trailing_zeros()));
-            write!(output, "{}/{}\n", Ipv6Addr::from(ip), 128 - b.log2()).unwrap();
-            line += 1;
-            assert!(count > 0);
-            count -= b;
-            ip += b as u128;
-        }
-    }
-    console_log!("Total: {}/{}", line, raw_len);
-    return Ok(output);
+macro_rules! decimal_type {
+    (Ipv4Addr) => {
+        u32
+    };
+    (Ipv6Addr) => {
+        u128
+    };
 }
 
-#[wasm_bindgen]
-pub fn routes_from_rir_stats(raw_data: &str, countries: &str) -> Result<String, JsValue> {
-    set_panic_hook();
-    let (excluding, country_set) = parse_contries(countries);
-    // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
-    let mut raw_entries: Vec<(u32, u32)> = Vec::new();
-    for (index, entry) in raw_data.split("\n").enumerate() {
-        if !entry.starts_with("#") && !entry.is_empty() {
-            let fields: Vec<&str> = entry.split("|").collect();
-            if fields.len() >= 7
-                && (excluding ^ country_set.contains(fields[1]))
-                && fields[2] == "ipv4"
-            {
-                let ip: Ipv4Addr = fields[3]
-                    .parse()
-                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
-                let count: u32 = fields[4]
-                    .parse()
-                    .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
-                let ip = ip.into();
-                raw_entries.push((ip, count));
-            }
-        }
-    }
-    let raw_len = raw_entries.len();
-    raw_entries.sort();
-    let mut merged_entries = Vec::new();
-    let mut last_entry = raw_entries[0];
-    for entry in raw_entries.into_iter().skip(1) {
-        if entry.0 - last_entry.0 == last_entry.1 {
-            last_entry = (last_entry.0, last_entry.1 + entry.1)
-        } else {
-            merged_entries.push(last_entry);
-            last_entry = entry;
-        }
-    }
-    if last_entry != *merged_entries.last().ok_or("Upstream returns empty.")?
-    /* FIX */
-    {
-        merged_entries.push(last_entry);
-    }
-    let mut output = String::new();
-    let mut line = 0;
-    for (mut ip, mut count) in merged_entries.into_iter() {
-        console_log!("{} {}", Ipv4Addr::from(ip), count);
-        while count != 0 {
-            let b = min(min(count, 2u32.pow(count.log2())), 2u32.pow(ip.trailing_zeros()));
-            write!(output, "{}/{}\n", Ipv4Addr::from(ip), 32 - b.log2()).unwrap();
-            line += 1;
-            assert!(count > 0);
-            count -= b;
-            ip += b;
-        }
-    }
-    console_log!("Total: {}/{}", line, raw_len);
-    return Ok(output);
+macro_rules! type_name {
+    (Ipv4Addr) => {
+        "ipv4"
+    };
+    (Ipv6Addr) => {
+        "ipv6"
+    };
 }
+
+macro_rules! parse_count {
+    (Ipv4Addr, $raw:expr) => {
+        $raw
+    };
+    (Ipv6Addr, $raw:expr) => {
+        1 << (128 - $raw)
+    };
+}
+
+macro_rules! implement_routes_from_rir_stats {
+    ($addr_type:ident, $name:ident) => {
+        #[wasm_bindgen]
+        pub fn $name(raw_data: &str, countries: &str) -> Result<String, JsValue> {
+            set_panic_hook();
+            let (excluding, country_set) = parse_contries(countries);
+            // https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/
+            let mut raw_entries: Vec<(decimal_type!($addr_type), decimal_type!($addr_type))> =
+                Vec::new();
+            for (index, entry) in raw_data.split("\n").enumerate() {
+                if !entry.starts_with("#") && !entry.is_empty() {
+                    let fields: Vec<&str> = entry.split("|").collect();
+                    if fields.len() >= 7
+                        && (excluding ^ country_set.contains(fields[1]))
+                        && fields[2] == type_name!($addr_type)
+                    {
+                        let ip: $addr_type = fields[3]
+                            .parse()
+                            .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
+                        let value: decimal_type!($addr_type) = fields[4]
+                            .parse()
+                            .map_err(|_e| Error::RIRStatsMalformed(index + 1))?;
+                        let count: decimal_type!($addr_type) = parse_count!($addr_type, value);
+                        let ip = ip.into();
+                        raw_entries.push((ip, count));
+                    }
+                }
+            }
+            let raw_len = raw_entries.len();
+            raw_entries.sort();
+            let mut merged_entries = Vec::new();
+            let mut last_entry = raw_entries[0];
+            for entry in raw_entries.into_iter().skip(1) {
+                if entry.0 - last_entry.0 == last_entry.1 {
+                    last_entry = (last_entry.0, last_entry.1 + entry.1)
+                } else {
+                    merged_entries.push(last_entry);
+                    last_entry = entry;
+                }
+            }
+            if last_entry != *merged_entries.last().ok_or("Upstream returns empty.")?
+            /* FIX */
+            {
+                merged_entries.push(last_entry);
+            }
+            let mut output = String::new();
+            let mut line = 0;
+            for (mut ip, mut count) in merged_entries.into_iter() {
+                console_log!("{} {}", $addr_type::from(ip), count);
+                while count != 0 {
+                    let b = min(
+                        (2 as decimal_type!($addr_type)).pow(count.log2()),
+                        (2 as decimal_type!($addr_type)).pow(ip.trailing_zeros()),
+                    );
+                    write!(
+                        output,
+                        "{}/{}\n",
+                        $addr_type::from(ip),
+                        std::mem::size_of::<decimal_type!($addr_type)>() as u32 * 8 - b.log2()
+                    )
+                    .unwrap();
+                    line += 1;
+                    assert!(count > 0);
+                    count -= b;
+                    ip += b;
+                }
+            }
+            console_log!("Total: {}/{}", line, raw_len);
+            return Ok(output);
+        }
+    };
+}
+
+implement_routes_from_rir_stats!(Ipv4Addr, routes_from_rir_stats);
+implement_routes_from_rir_stats!(Ipv6Addr, routes_from_rir_stats6);
