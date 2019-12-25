@@ -36,14 +36,11 @@ async function handleGenerate(request, ipv6) {
     if (countries.match(/^\!?([A-Z]{2})?(,[A-Z]{2})*$/) === null) {
       throw new ClientError("Unable to parse `countries`");
     }
-    const rir_stats = [];
-    for (const registry of registries) {
-      const data = await fetch_rir_stats(registry);
-      rir_stats.push(data);
-    }
+    // console.time("fetch_all_rir_stats");
+    const rir_stats = await Promise.all(registries.map(registry => fetch_rir_stats(registry)));
+    // console.timeEnd("fetch_all_rir_stats");
     const fn = ipv6 ? routes_from_rir_stats6 : routes_from_rir_stats;
     return new Response(fn(rir_stats.join("\n"), countries), { contentType: "text/plain" });
-    //return new Response("Boom");
   }
   catch (e) {
     if (e instanceof ClientError) {
