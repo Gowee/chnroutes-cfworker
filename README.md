@@ -20,6 +20,7 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
         - Becasuse almost all of mainland China IPs are delegated to APNIC currently (Sep 2019), so it might be sufficient to only cover APNIC.
     - `https://chnroutes-worker.bamboo.workers.dev/generate6?countries=US&registries=All` [🔗](https://chnroutes-worker.bamboo.workers.dev/generate?countries=US&registries=All)
         - All U.S. IPv6s delegated to any registries.
+        - *The `/generate6` endpoint is experimental and subject subject to change.*
 
 
 
