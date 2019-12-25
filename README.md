@@ -9,7 +9,7 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
 - **Parameters:**
     - `countries`
         - Comma-separated list of countries represented by 2 letters [Country Code](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
-        - A leading `!` indicates excluding all following countries. For example, `!CN` which indicats all countries/regions except mainland China in registries specified below. A single `!` indicates all countries. And so on...
+        - A leading `!` indicates excluding all following countries. For example, `!CN` will cover all countries/regions except mainland China in registries specified below. A single `!` indicates all countries. And so on...
     - `registries`
         - Comma-separated list of [registries](https://en.wikipedia.org/wiki/Regional_Internet_registry): AFRINIC, APNIC, ARIN, LACNIC, RIPE. Or `All` for all the five. 
         - Excluding is not supported.
