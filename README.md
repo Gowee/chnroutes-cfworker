@@ -23,9 +23,9 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
 
 ## Deployment
 1. Make sure Rust and Cargo is installed.
-1. Download the project with `git clone https://github.com/Gowee/chnroutes-cfworker`.
-2. Install the CLI tool [wrangler](https://github.com/cloudflare/wrangler) for deploying to CloudFlare workers.
-3. Configure and publish the worker following [the official quickstart](https://developers.cloudflare.com/workers/quickstart/#configure).
+2. Download the project with `git clone https://github.com/Gowee/chnroutes-cfworker`.
+3. Install the CLI tool [wrangler](https://github.com/cloudflare/wrangler) for deploying to CloudFlare workers.
+4. Configure and publish the worker following [the official quickstart](https://developers.cloudflare.com/workers/quickstart/#configure).
 
 ## Credits
 This repo takes [rustwasm-worker-template](https://github.com/cloudflare/rustwasm-worker-template), which is a project by [Ashley Williams](https://github.com/ashleygwilliams), as the base skeleton.

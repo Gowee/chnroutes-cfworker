@@ -137,7 +137,7 @@ macro_rules! implement_routes_from_rir_stats {
             let mut output = String::new();
             let mut line = 0;
             for (mut ip, mut count) in merged_entries.into_iter() {
-                console_log!("{} {}", $addr_type::from(ip), count);
+                // console_log!("{} {}", $addr_type::from(ip), count);
                 while count != 0 {
                     let b = min(
                         (2 as decimal_type!($addr_type)).pow(count.log2()),
