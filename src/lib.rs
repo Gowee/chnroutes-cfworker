@@ -26,6 +26,7 @@ cfg_if! {
 #[derive(Debug)]
 enum Error {
     RIRStatsMalformed(usize),
+    RoutesEmpty
 }
 
 impl From<Error> for JsValue {
@@ -33,6 +34,9 @@ impl From<Error> for JsValue {
         match err {
             Error::RIRStatsMalformed(lineno) => {
                 JsValue::from(format!("RIR stats is malformed at line {}.", lineno))
+            }
+            Error::RoutesEmpty => {
+                JsValue::from(format!("Either the upstream stats is empty or all records are filtered out."))
             }
         }
     }
@@ -116,7 +120,7 @@ macro_rules! implement_routes_from_rir_stats {
             let raw_len = raw_entries.len();
             raw_entries.sort();
             let mut merged_entries = Vec::new();
-            let mut last_entry = raw_entries[0];
+            let mut last_entry = *raw_entries.first().ok_or(Error::RoutesEmpty)?;
             for entry in raw_entries.into_iter().skip(1) {
                 if entry.0 - last_entry.0 == last_entry.1 {
                     last_entry = (last_entry.0, last_entry.1 + entry.1)
@@ -125,7 +129,7 @@ macro_rules! implement_routes_from_rir_stats {
                     last_entry = entry;
                 }
             }
-            if last_entry != *merged_entries.last().ok_or("Upstream returns empty.")?
+            if last_entry != *merged_entries.last().unwrap()
             /* FIX */
             {
                 merged_entries.push(last_entry);

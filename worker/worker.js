@@ -2,7 +2,7 @@ addEventListener('fetch', event => {
   event.respondWith(handleRequest(event.request))
 })
 
-class ClientError extends Error {}
+class ClientError extends Error { }
 
 const { routes_from_rir_stats, routes_from_rir_stats6 } = wasm_bindgen;
 

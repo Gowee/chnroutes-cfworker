@@ -13,7 +13,6 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
     - `registries`
         - Comma-separated list of [registries](https://en.wikipedia.org/wiki/Regional_Internet_registry): AFRINIC, APNIC, ARIN, LACNIC, RIPE. Or `All` for all the five. 
         - Excluding is not supported.
-        - RIR stats of all registry are fetched respectively when generating routes. So be careful that it may take much longer to cover more registries.
 - **Examples:**
     - `https://chnroutes-worker.bamboo.workers.dev/generate?countries=CN&registries=APNIC` [🔗](https://chnroutes-worker.bamboo.workers.dev/generate?countries=CN&registries=APNIC)
         - Typical chnroutes, useful for spliting traffic when bypassing the [GFW](https://en.wikipedia.org/wiki/Great_Firewall) with VPN/Proxies 
@@ -22,7 +21,11 @@ Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RI
         - All U.S. IPv6s delegated to any registries.
         - *The `/generate6` endpoint is experimental and subject to change.*
 
-
+## Deployment
+1. Make sure Rust and Cargo is installed.
+1. Download the project with `git clone https://github.com/Gowee/chnroutes-cfworker`.
+2. Install the CLI tool [wrangler](https://github.com/cloudflare/wrangler) for deploying to CloudFlare workers.
+3. Configure and publish the worker following [the official quickstart](https://developers.cloudflare.com/workers/quickstart/#configure).
 
 ## Credits
 This repo takes [rustwasm-worker-template](https://github.com/cloudflare/rustwasm-worker-template), which is a project by [Ashley Williams](https://github.com/ashleygwilliams), as the base skeleton.
