@@ -1,6 +1,10 @@
 # chnroutes-cfworker
 Generate <abbr title="routes of mainland China">chnroutes</abbr> by fetching [RIR stats](https://www.apnic.net/about-apnic/corporate-documents/documents/resource-guidelines/rir-statistics-exchange-format/) and managing to compressing routes by merging consecutive CIDRs, deployed on [Cloudflare Workers](https://workers.cloudflare.com/). Ported from [my Python script](https://gist.github.com/Gowee/3d06f1b96fbbeaba651604fd49b1458e).
 
+<p align="center">
+  <b>📢 The CIDR aggregator is now available as a standalone app: https://github.com/Gowee/cidr-aggregator 📢</b>
+</p>
+    
 ## API
 **Base URL: `https://chnroutes-worker.bamboo.workers.dev` [🔗](https://chnroutes-worker.bamboo.workers.dev)**
 
